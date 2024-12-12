@@ -16,8 +16,8 @@ func main() {
 
 	// 指定したアドレスとポート番号でTCP接続を待ち受けるソケットを作成する
 	// 低レイヤー的な補足として、
-	// ・OSのsocket()システムコールを内部で呼び出し、待受用のソケットを生成する
-	// ・ソケットは「未接続状態」のままリスニングモードで待機する
+	// - OSのsocket()システムコールを内部で呼び出し、待受用のソケットを生成する
+	// - ソケットは「未接続状態」のままリスニングモードで待機する
 	listener, err := net.ListenTCP("tcp", tcpAddr)
 	errHandler(err, "listen tcp")
 
@@ -31,17 +31,17 @@ func main() {
 		}
 
 		// リクエスト内容を読み取る
-		req := make([]byte, 1024)
-		rLen, err := conn.Read(req)
+		data := make([]byte, 1024)
+		rLen, err := conn.Read(data)
 		errHandler(err, "read from socket")
 		fmt.Printf("request len: %d", rLen)
 
 		// リクエスト内容を書き込むファイルを書き込み権限付きで開く
-		f, err := os.Create("./request-body.txt")
+		f, err := os.Create("./server/request-body.data")
 		errHandler(err, "open file")
 
 		// リクエスト内容をファイルに書き込む
-		_, err = f.Write(req)
+		_, err = f.Write(data)
 		errHandler(err, "write to file")
 
 		conn.Write([]byte("success"))

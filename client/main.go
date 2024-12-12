@@ -23,14 +23,30 @@ func main() {
 	conn, err := net.DialTCP("tcp", nil, tcpAddr)
 	errHandler(err, "dial")
 
-	// ソケットにデータを書き込む
-	_, err = conn.Write([]byte("HEAD / HTTP/1.0\r\n\r\n"))
+	// ファイルからリクエスト内容を読み込む
+	// ファイルパスはgoコマンドを実行するディレクトリからの相対パスになる
+	f, err := os.Open("./client/client-send.data")
+	errHandler(err, "open client-send.data")
+
+	data := make([]byte, 1000)
+	cnt, err := f.Read(data)
+	fmt.Printf("read %d byte", cnt)
+
+	// ソケットにリクエストデータを書き込む
+	_, err = conn.Write(data)
 	errHandler(err, "write to socket")
 
-	// ソケットからデータを読み込む
+	// ソケットからレスポンスデータを読み込む
 	res := make([]byte, 1024)
 	len, err := conn.Read(res)
 	errHandler(err, "read from socket")
+
+	// レスポンスデータをファイルに書き込む
+	f2, err := os.Create("./client/client-received.data")
+	errHandler(err, "open client-received.data")
+
+	_, err = f2.Write(res)
+
 	fmt.Println("response: ", string(res[:len]))
 
 	// 接続を切断

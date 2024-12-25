@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"time"
 )
 
 func main() {
@@ -44,13 +45,19 @@ func main() {
 		_, err = f.Write(data)
 		errHandler(err, "write to file")
 
-		// レスポンス内容をファイルから読み取り、ソケットに書き込む
-		f2, err := os.Open(("./server/server_send.data"))
-		errHandler(err, "open server_send.data")
+		// タイムゾーンをGMTに指定
+		gmt, _ := time.LoadLocation("GMT")
 
-		res := make([]byte, 1024)
-		_, err = f2.Read(res)
-		errHandler(err, "read from file")
+		// レスポンス生成
+		resBody := "<html><body><h1>It works!</h1></body></html>"
+		resLine := "HTTP/1.1 200 OK\r\n"
+		resHeader := ""
+		resHeader += fmt.Sprintf("Date: %s\r\n", time.Now().In(gmt).Format(time.RFC1123))
+		resHeader += "Host: HenaServer/0.1\r\n"
+		resHeader += fmt.Sprintf("Content-Length: %d\r\n", len(resBody))
+		resHeader += "Connection: Close\r\n"
+		resHeader += "Content-Type: text/html\r\n"
+		res := resLine + resHeader + "\r\n" + resBody
 
 		conn.Write([]byte(res))
 

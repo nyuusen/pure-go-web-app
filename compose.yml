@@ -1,0 +1,7 @@
+services:
+  apache:
+    image: httpd:latest
+    ports:
+      - "80:80"
+    volumes:
+      - ./docker/apache/html:/usr/local/apache2/htdocs/

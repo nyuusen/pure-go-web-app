@@ -37,14 +37,22 @@ func main() {
 		fmt.Printf("request len: %d", rLen)
 
 		// リクエスト内容を書き込むファイルを書き込み権限付きで開く
-		f, err := os.Create("./server/request-body.data")
+		f, err := os.Create("./server/request_body.data")
 		errHandler(err, "open file")
 
 		// リクエスト内容をファイルに書き込む
 		_, err = f.Write(data)
 		errHandler(err, "write to file")
 
-		conn.Write([]byte("success"))
+		// レスポンス内容をファイルから読み取り、ソケットに書き込む
+		f2, err := os.Open(("./server/server_send.data"))
+		errHandler(err, "open server_send.data")
+
+		res := make([]byte, 1024)
+		_, err = f2.Read(res)
+		errHandler(err, "read from file")
+
+		conn.Write([]byte(res))
 
 		err = conn.Close()
 		errHandler(err, "close")

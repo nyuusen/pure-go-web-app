@@ -1,8 +1,15 @@
 package main
 
-import "fmt"
+import (
+	"fmt"
+	"os"
+	"path/filepath"
+)
 
 func main() {
+	/*
+		ビット演算
+	*/
 	a := 12 // 1100
 	b := 7  // 0111
 
@@ -13,4 +20,14 @@ func main() {
 	// ビット論理和を計算
 	or := a | b
 	fmt.Printf("OR: %04b\n", or)
+
+	/*
+		ディレクトリ操作関連
+	*/
+	// ビルド実行時のカレントディレクトリを取得
+	dir, _ := os.Getwd()
+	fmt.Printf("Getwd: %s\n", dir)
+	// このファイルの絶対パスを取得
+	absDir, _ := filepath.Abs("./server/main.go")
+	fmt.Printf("Abs: %s\n", absDir)
 }

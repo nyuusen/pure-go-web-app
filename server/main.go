@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"path/filepath"
+	"strings"
 	"time"
 )
 
@@ -45,13 +47,48 @@ func main() {
 		_, err = f.Write(data)
 		errHandler(err, "write to file")
 
-		// タイムゾーンをGMTに指定
-		gmt, _ := time.LoadLocation("GMT")
+		/*
+			リクエスト内容の解析
+		*/
+		reqStr := string(data)
+		fmt.Printf("request: %s\n", reqStr)
+		// リクエストラインを取得
+		reqLine, reqRest, _ := strings.Cut(reqStr, "\r\n")
+		fmt.Printf("request line: %s\n", reqLine)
+		fmt.Printf("rest: %s\n", reqRest)
+		// リクエストヘッダとボディを取得
+		reqRestSplit := strings.Split(reqRest, "\r\n\r\n")
+		fmt.Printf("request header: %s\n", reqRestSplit[0])
+		fmt.Printf("request body: %s\n", reqRestSplit[1])
+		// リクエストラインをパースする(-> [GET / HTTP/1.1])
+		splitReqLine := strings.Split(reqLine, " ")
+		reqPath := splitReqLine[1]
+		if reqPath == "/" {
+			reqPath = "/index.html"
+		}
 
-		// レスポンス生成
-		resBody := "<html><body><h1>It works!</h1></body></html>"
+		/*
+			レスポンス生成
+		*/
+		// main.goを実行するディレクトリに関係なく、同じ階層にあるstaticディレクトリをルートディレクトリとして扱えるようにする
+		staticDir, err := filepath.Abs("./server/static")
+		fmt.Printf("static dir: %s\n", staticDir)
+		fmt.Printf("req path: %s\n", staticDir+reqPath)
+
+		staticFile, err := os.Open(staticDir + reqPath)
+		if err != nil {
+			// TODO: NotFoundエラーを返す
+			os.Exit(1)
+		}
+
+		// レスポンス内容を組み立てる
+		staticFileContent := make([]byte, 1024)
+		_, err = staticFile.Read(staticFileContent)
+		resBody := string(staticFileContent)
 		resLine := "HTTP/1.1 200 OK\r\n"
 		resHeader := ""
+		// タイムゾーンをGMTに指定
+		gmt, _ := time.LoadLocation("GMT")
 		resHeader += fmt.Sprintf("Date: %s\r\n", time.Now().In(gmt).Format(time.RFC1123))
 		resHeader += "Host: HenaServer/0.1\r\n"
 		resHeader += fmt.Sprintf("Content-Length: %d\r\n", len(resBody))
@@ -59,6 +96,9 @@ func main() {
 		resHeader += "Content-Type: text/html\r\n"
 		res := resLine + resHeader + "\r\n" + resBody
 
+		/*
+			レスポンス送信
+		*/
 		conn.Write([]byte(res))
 
 		err = conn.Close()

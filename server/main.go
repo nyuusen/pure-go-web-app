@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"mime"
 	"net"
 	"os"
 	"path/filepath"
@@ -84,7 +85,8 @@ func main() {
 			resBody = "<html><body><h1>404 Not Found</h1></body></html>"
 			resLine = "HTTP/1.1 404 Not Found\r\n"
 		} else {
-			staticFileContent := make([]byte, 1024)
+			staticFileInfo, _ := staticFile.Stat()
+			staticFileContent := make([]byte, staticFileInfo.Size())
 			_, err = staticFile.Read(staticFileContent)
 			resBody = string(staticFileContent)
 			resLine = "HTTP/1.1 200 OK\r\n"
@@ -97,19 +99,24 @@ func main() {
 		resHeader += "Host: HenaServer/0.1\r\n"
 		resHeader += fmt.Sprintf("Content-Length: %d\r\n", len(resBody))
 		resHeader += "Connection: Close\r\n"
-		resHeader += "Content-Type: text/html\r\n"
+		// リクエストパスから拡張子を取得し、Content-Typeヘッダーを設定
+		ext := filepath.Ext(reqPath)
+		contentType := mime.TypeByExtension(ext)
+		resHeader += fmt.Sprintf("Content-Type: %s\r\n", contentType)
 
 		/*
 			レスポンス送信
 		*/
 		res := resLine + resHeader + "\r\n" + resBody
 		conn.Write([]byte(res))
+
+		continue
 	}
 }
 
 func errHandler(err error, msg string) {
 	if err != nil {
 		fmt.Printf("%s failed: %s\n", msg, err)
-		os.Exit(1)
+		// os.Exit(1)
 	}
 }

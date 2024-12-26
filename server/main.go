@@ -28,6 +28,7 @@ func main() {
 		// リッスンソケットが接続要求を受けて、新しいソケット(クライアントごと)を生成する
 		// accept()システムコールを内部で呼び出し、3-way handshake(TCP接続確立)を完了させる
 		conn, err := listener.Accept()
+		defer conn.Close()
 		if err != nil {
 			fmt.Printf("listener accept failed: %s", err)
 			continue
@@ -70,39 +71,39 @@ func main() {
 		/*
 			レスポンス生成
 		*/
-		// main.goを実行するディレクトリに関係なく、同じ階層にあるstaticディレクトリをルートディレクトリとして扱えるようにする
 		staticDir, err := filepath.Abs("./server/static")
 		fmt.Printf("static dir: %s\n", staticDir)
 		fmt.Printf("req path: %s\n", staticDir+reqPath)
 
+		var resLine, resHeader, resBody string
+
+		// 静的資材が置いてあるstaticディレクトリからリクエストパスに対応するファイルを取得
 		staticFile, err := os.Open(staticDir + reqPath)
+		defer staticFile.Close()
 		if err != nil {
-			// TODO: NotFoundエラーを返す
-			os.Exit(1)
+			resBody = "<html><body><h1>404 Not Found</h1></body></html>"
+			resLine = "HTTP/1.1 404 Not Found\r\n"
+		} else {
+			staticFileContent := make([]byte, 1024)
+			_, err = staticFile.Read(staticFileContent)
+			resBody = string(staticFileContent)
+			resLine = "HTTP/1.1 200 OK\r\n"
 		}
 
-		// レスポンス内容を組み立てる
-		staticFileContent := make([]byte, 1024)
-		_, err = staticFile.Read(staticFileContent)
-		resBody := string(staticFileContent)
-		resLine := "HTTP/1.1 200 OK\r\n"
-		resHeader := ""
-		// タイムゾーンをGMTに指定
+		resHeader = ""
+		// Dateヘッダー用の時刻生成のためタイムゾーン:GMTの現在時刻を取得
 		gmt, _ := time.LoadLocation("GMT")
 		resHeader += fmt.Sprintf("Date: %s\r\n", time.Now().In(gmt).Format(time.RFC1123))
 		resHeader += "Host: HenaServer/0.1\r\n"
 		resHeader += fmt.Sprintf("Content-Length: %d\r\n", len(resBody))
 		resHeader += "Connection: Close\r\n"
 		resHeader += "Content-Type: text/html\r\n"
-		res := resLine + resHeader + "\r\n" + resBody
 
 		/*
 			レスポンス送信
 		*/
+		res := resLine + resHeader + "\r\n" + resBody
 		conn.Write([]byte(res))
-
-		err = conn.Close()
-		errHandler(err, "close")
 	}
 }
 

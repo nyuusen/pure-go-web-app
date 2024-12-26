@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"mime"
 	"net"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -57,6 +58,8 @@ func handleConnection(conn net.Conn) {
 	errHandler(err, "read from socket")
 
 	method, path, header, body, err := parseHttpRequest(string(data))
+	// デバッグ用リクエスト内容出力
+	// fmt.Printf("method: %s, path: %s, header: %s, body: %s", method, path, header, body)
 
 	/*
 	   レスポンス生成
@@ -81,6 +84,17 @@ func handleConnection(conn net.Conn) {
 			</body>
 		</html>`, method, path, header, body)
 		resLine = "HTTP/1.1 200 OK\r\n"
+	} else if path == "/parameters" {
+		fmt.Println(method)
+		if method == "POST" {
+			val, err := url.ParseQuery(body)
+			errHandler(err, "parse query")
+			resBody = fmt.Sprintf("<html><body><h1>Parameters</h1><p>%s</p></body></html>", val)
+			resLine = "HTTP/1.1 200 OK\r\n"
+		} else {
+			resBody = "<html><body><h1>405 Method Not Allowed</h1></body></html>"
+			resLine = "HTTP/1.1 405 Method Not Allowed\r\n"
+		}
 	} else {
 		// 静的資材が置いてあるstaticディレクトリからリクエストパスに対応するファイルを取得
 		staticFile, err := os.Open(staticDir + path)
@@ -107,7 +121,10 @@ func handleConnection(conn net.Conn) {
 	// リクエストパスから拡張子を取得し、Content-Typeヘッダーを設定
 	ext := filepath.Ext(path)
 	contentType := mime.TypeByExtension(ext)
-	resHeader += fmt.Sprintf("Content-Type: %s\r\n", contentType)
+	if contentType == "" {
+		contentType = "text/html"
+	}
+	resHeader += fmt.Sprintf("Content-Type: %s\r\n", contentType+"; charset=utf-8")
 
 	/*
 	   レスポンス送信
@@ -130,7 +147,7 @@ func parseHttpRequest(reqStr string) (method, path, header, body string, err err
 	// リクエストヘッダとボディを取得
 	reqRestSplit := strings.Split(reqRest, "\r\n\r\n")
 	// TODO: HTTPメソッドを動的に返却する
-	return "GET", reqPath, reqRestSplit[0], reqRestSplit[1], nil
+	return splitReqLine[0], reqPath, reqRestSplit[0], reqRestSplit[1], nil
 }
 
 func errHandler(err error, msg string) {

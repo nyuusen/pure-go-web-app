@@ -56,7 +56,7 @@ func handleConnection(conn net.Conn) {
 	_, err := conn.Read(data)
 	errHandler(err, "read from socket")
 
-	_, path, _, _, err := parseHttpRequest(string(data))
+	method, path, header, body, err := parseHttpRequest(string(data))
 
 	/*
 	   レスポンス生成
@@ -66,8 +66,20 @@ func handleConnection(conn net.Conn) {
 	var resLine, resHeader, resBody string
 
 	if path == "/now" {
-		// 動的な値を返却するエンドポイントの場合
 		resBody = fmt.Sprintf("<html><body><h1>Now: %s</h1></body></html>", time.Now().Format(time.RFC3339))
+		resLine = "HTTP/1.1 200 OK\r\n"
+	} else if path == "/show_request" {
+		resBody = fmt.Sprintf(`
+		<html>
+			<body>
+				<h1>Request Line</h1>
+				<p>%s %s</p>
+				<h1>Request Header</h1>
+				<p>%s</p>
+				<h1>Request Body</h1>
+				<p>%s</p>
+			</body>
+		</html>`, method, path, header, body)
 		resLine = "HTTP/1.1 200 OK\r\n"
 	} else {
 		// 静的資材が置いてあるstaticディレクトリからリクエストパスに対応するファイルを取得
